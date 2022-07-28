@@ -1,0 +1,21 @@
+name: fsrcnn
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.8
+  - pip
+  - numpy
+  - torchvision
+  - pytorch
+  - jupyterlab
+  - tqdm
+  - scikit-image
+  - tensorboard
+  - pandas
+  - torchmetrics
+  - pip:
+      - ffmpeg
+      - opencv_python
+      - yml
