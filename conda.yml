@@ -15,6 +15,7 @@ dependencies:
   - tensorboard
   - pandas
   - torchmetrics
+  - matplotlib
   - pip:
       - ffmpeg
       - opencv_python
