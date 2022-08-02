@@ -13,20 +13,24 @@ d = 56, s = 16 | 33.01 (12336)| 33.12 (14640) | 33.17 (16944)
 
 
 class Model(nn.Module):
-    def __init__(self, d, s):
+    def __init__(self, d, s, m=2):
         super().__init__()
         self.d = d
         self.s = s
+        self.m = m
         # What is
         self.conv1 = Conv2d(3, kernel_size=5, out_channels=self.d)
         self.conv2 = Conv2d(self.d, kernel_size=1, out_channels=self.s)
-        self.conv3 = Conv2d(self.s, kernel_size=3, out_channels=self.s)
+        self.conv3 = []
+        for _ in range(self.m):
+            self.conv3.append(Conv2d(self.s, kernel_size=3, out_channels=self.s))
         self.conv4 = Conv2d(self.s, kernel_size=1, out_channels=self.d)
         self.deconv = ConvTranspose2d(self.d, kernel_size=9, out_channels=3)
 
     def forward(self, x):
         x = self.conv1(x)
         x = self.conv2(x)
-        x = self.conv31(x)
+        for conv in self.conv3:
+            x = conv(x)
         x = self.conv4(x)
         return self.deconv(x)
