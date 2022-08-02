@@ -14,9 +14,9 @@ def to_ndarray(value):
 
 
 class Dataset(TorchDataset):
-    def __init__(self, image_paths, downscaling_factor=0.5, transform=None):
+    def __init__(self, image_paths, upscaling_factor=2, transform=None):
         self.image_paths = image_paths
-        self.downscaling_factor = downscaling_factor
+        self.upscaling_factor = upscaling_factor
         self.transform = transform
         self.downscale_factors = [1.0, 0.9, 0.8, 0.7, 0.6]
         self.rotations = [0, 90, 180, 270]
@@ -54,7 +54,7 @@ class Dataset(TorchDataset):
         transform_matrix = cv2.getRotationMatrix2D(center, random_rotation_factor, 1.0)
         cropped_image = cv2.warpAffine(cropped_image, transform_matrix, (width, height))
 
-        low_size = int(cropped_image.shape[0] * self.downscaling_factor)
+        low_size = int(cropped_image.shape[0] / self.upscaling_factor)
         low_res_image = cv2.resize(cropped_image, dsize=(low_size, low_size), interpolation=cv2.INTER_CUBIC)
 
         # swap color axis because

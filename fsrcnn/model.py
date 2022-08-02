@@ -13,22 +13,23 @@ d = 56, s = 16 | 33.01 (12336)| 33.12 (14640) | 33.17 (16944)
 
 
 class Model(nn.Module):
-    def __init__(self, d, s, m=2):
+    def __init__(self, d, s, m=2, n=2):
         super().__init__()
         self.d = d
         self.s = s
         self.m = m
+        self.n = n
         # What is
-        self.conv1 = Conv2d(3, kernel_size=5, out_channels=self.d)
-        self.conv2 = Conv2d(self.d, kernel_size=1, out_channels=self.s)
+        self.conv1 = Conv2d(3, kernel_size=5, out_channels=self.d, padding='same')
+        self.conv2 = Conv2d(self.d, kernel_size=1, out_channels=self.s, padding='same')
         self.conv3 = []
         for _ in range(self.m):
-            self.conv3.append(Conv2d(self.s, kernel_size=3, out_channels=self.s))
-        self.conv4 = Conv2d(self.s, kernel_size=1, out_channels=self.d)
-        self.deconv = ConvTranspose2d(self.d, kernel_size=9, out_channels=3)
+            self.conv3.append(Conv2d(self.s, kernel_size=3, out_channels=self.s, padding='same'))
+        self.conv4 = Conv2d(self.s, kernel_size=1, out_channels=self.d, padding='same')
+        self.deconv = ConvTranspose2d(self.d, kernel_size=9, out_channels=3, stride=self.n)
 
-    def forward(self, x):
-        x = self.conv1(x)
+    def forward(self, inp):
+        x = self.conv1(inp)
         x = self.conv2(x)
         for conv in self.conv3:
             x = conv(x)
