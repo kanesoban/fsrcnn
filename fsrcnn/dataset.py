@@ -57,6 +57,12 @@ class Dataset(TorchDataset):
         low_size = int(cropped_image.shape[0] * self.downscaling_factor)
         low_res_image = cv2.resize(cropped_image, dsize=(low_size, low_size), interpolation=cv2.INTER_CUBIC)
 
+        # swap color axis because
+        # numpy image: H x W x C
+        # torch image: C X H X W
+        cropped_image = cropped_image.transpose((2, 0, 1)).astype(float)
+        low_res_image = low_res_image.transpose((2, 0, 1)).astype(float)
+
         sample = {'high_res_image': cropped_image, 'low_res_image': low_res_image}
 
         if self.transform:
