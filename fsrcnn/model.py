@@ -28,6 +28,27 @@ class Model(nn.Module):
         self.conv4 = Conv2d(self.s, kernel_size=1, out_channels=self.d, padding='same')
         self.deconv = ConvTranspose2d(self.d, kernel_size=9, out_channels=3, stride=self.n)
 
+    def float(self):
+        super().float()
+        self.conv1.float()
+        self.conv2.float()
+        for conv in self.conv3:
+            conv.float()
+        self.conv4.float()
+        self.deconv.float()
+        return self
+
+    def to(self, *args, **kwargs):
+        super().to(*args, **kwargs)
+        # We need to manually send some layers to the appropriate device
+        self.conv1.to(*args, **kwargs)
+        self.conv2.to(*args, **kwargs)
+        for conv in self.conv3:
+            conv.to(*args, **kwargs)
+        self.conv4.to(*args, **kwargs)
+        self.deconv.to(*args, **kwargs)
+        return self
+
     def forward(self, inp):
         x = self.conv1(inp)
         x = self.conv2(x)
