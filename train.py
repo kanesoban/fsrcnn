@@ -1,6 +1,7 @@
 from glob import glob
 
-import cv2
+import numpy as np
+from skimage.transform import resize
 from tqdm import tqdm
 import torch
 from torch.utils.data import DataLoader
@@ -36,7 +37,10 @@ if __name__ == '__main__':
 
             with torch.cuda.amp.autocast(enabled=False):
                 outputs = model(low_res_image.float())
-                #high_res_image = cv2.resize(outputs, dsize=outputs.shape[-2:], interpolation=cv2.INTER_CUBIC)
+                # This resizing 'hack' is needed because the deconvolved output and the high resolution image are not exactly the same shape
+                high_res_image = np.expand_dims(resize(np.squeeze(high_res_image.cpu().numpy().transpose((0, 2, 3, 1))),
+                                                       outputs.shape[-2:]).transpose((2, 0, 1)), axis=0)
+                high_res_image = torch.from_numpy(high_res_image).float().to(device)
                 loss = criterion(outputs, high_res_image)
 
             # statistics
