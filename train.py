@@ -16,6 +16,7 @@ from fsrcnn.model import Model
 upscaling_factor = 2
 mixed_precision_enabled = False
 epochs = 10
+batch_size = 1
 
 def create_dataloaders():
     image_paths = glob('datasets/T91/*')
@@ -62,11 +63,12 @@ if __name__ == '__main__':
     optimizer = torch.optim.RMSprop(model.parameters())
     criterion = MSELoss()
 
-    epoch_train_loss = 0.0
-    epoch_val_loss = 0.0
     best_val_loss = np.inf
 
     for _ in range(epochs):
+        epoch_train_loss = 0.0
+        epoch_val_loss = 0.0
+
         # Train for 1 epoch
         model.train()
         with torch.set_grad_enabled(True):
@@ -82,8 +84,7 @@ if __name__ == '__main__':
                 optimizer.zero_grad()
 
                 # statistics
-                current_loss = loss.item() * len(batch)
-                epoch_train_loss += current_loss
+                epoch_train_loss += loss.item() * batch_size
 
         # Validate
         model.eval()
@@ -92,12 +93,11 @@ if __name__ == '__main__':
                 loss = calculate_loss(batch, model, criterion)
 
                 # statistics
-                current_loss = loss.item() * len(batch)
-                epoch_val_loss += current_loss
-                if epoch_val_loss < best_val_loss:
-                    best_val_loss = epoch_val_loss
-                    torch.save(model.state_dict(), 'model.pt')
-                    torch.save(optimizer, 'optimizer.pt')
+                epoch_val_loss += loss.item() * batch_size
+            if epoch_val_loss < best_val_loss:
+                best_val_loss = epoch_val_loss
+                torch.save(model.state_dict(), 'model.pt')
+                torch.save(optimizer, 'optimizer.pt')
 
             print('Average training loss for epoch: {}'.format(epoch_train_loss / len(train_dataloader.dataset)))
             print('Average validation loss for epoch: {}'.format(epoch_val_loss / len(val_dataloader.dataset)))
