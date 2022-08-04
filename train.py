@@ -38,6 +38,19 @@ def create_dataloaders():
     return train_dataloader, val_dataloader, test_dataloader
 
 
+def calculate_loss(batch, model, criterion):
+    high_res_image = batch['high_res_image'].float().to(device)
+    low_res_image = batch['low_res_image'].float().to(device)
+    with torch.cuda.amp.autocast(enabled=False):
+        outputs = model(low_res_image.float())
+        # This resizing 'hack' is needed because the deconvolved output and the high resolution image are not exactly the same shape
+        high_res_image = np.expand_dims(resize(np.squeeze(high_res_image.cpu().numpy().transpose((0, 2, 3, 1))),
+                                               outputs.shape[-2:]).transpose((2, 0, 1)), axis=0)
+        high_res_image = torch.from_numpy(high_res_image).float().to(device)
+        loss = criterion(outputs, high_res_image)
+    return loss
+
+
 if __name__ == '__main__':
     train_dataloader, val_dataloader, test_dataloader = create_dataloaders()
     torch.save(train_dataloader, 'train_dataloader.pt')
@@ -58,16 +71,7 @@ if __name__ == '__main__':
     model.train()
     with torch.set_grad_enabled(True):
         for batch_idx, batch in tqdm(enumerate(train_dataloader)):
-            high_res_image = batch['high_res_image'].float().to(device)
-            low_res_image = batch['low_res_image'].float().to(device)
-
-            with torch.cuda.amp.autocast(enabled=False):
-                outputs = model(low_res_image.float())
-                # This resizing 'hack' is needed because the deconvolved output and the high resolution image are not exactly the same shape
-                high_res_image = np.expand_dims(resize(np.squeeze(high_res_image.cpu().numpy().transpose((0, 2, 3, 1))),
-                                                       outputs.shape[-2:]).transpose((2, 0, 1)), axis=0)
-                high_res_image = torch.from_numpy(high_res_image).float().to(device)
-                loss = criterion(outputs, high_res_image)
+            loss = calculate_loss(batch, model, criterion)
 
             # Backpropagate losses
             # TODO: handle scaler?
@@ -78,26 +82,17 @@ if __name__ == '__main__':
             optimizer.zero_grad()
 
             # statistics
-            current_loss = loss.item() * low_res_image.size(0)
+            current_loss = loss.item() * len(batch)
             epoch_train_loss += current_loss
 
     # Validate
     model.eval()
     with torch.set_grad_enabled(False):
         for batch_idx, batch in tqdm(enumerate(val_dataloader)):
-            high_res_image = batch['high_res_image'].float().to(device)
-            low_res_image = batch['low_res_image'].float().to(device)
-
-            with torch.cuda.amp.autocast(enabled=False):
-                outputs = model(low_res_image.float())
-                # This resizing 'hack' is needed because the deconvolved output and the high resolution image are not exactly the same shape
-                high_res_image = np.expand_dims(resize(np.squeeze(high_res_image.cpu().numpy().transpose((0, 2, 3, 1))),
-                                                       outputs.shape[-2:]).transpose((2, 0, 1)), axis=0)
-                high_res_image = torch.from_numpy(high_res_image).float().to(device)
-                loss = criterion(outputs, high_res_image)
+            loss = calculate_loss(batch, model, criterion)
 
             # statistics
-            current_loss = loss.item() * low_res_image.size(0)
+            current_loss = loss.item() * len(batch)
             epoch_val_loss += current_loss
             if epoch_val_loss < best_val_loss:
                 best_val_loss = epoch_val_loss
