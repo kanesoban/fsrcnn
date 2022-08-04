@@ -36,10 +36,14 @@ class Model(nn.Module):
     def float(self):
         super().float()
         self.conv1.float()
+        self.activation1.float()
         self.conv2.float()
-        for conv in self.conv3:
+        self.activation2.float()
+        for conv, prelu in zip(self.conv3, self.activation3):
             conv.float()
+            prelu.float()
         self.conv4.float()
+        self.activation4.float()
         self.deconv.float()
         return self
 
@@ -47,10 +51,14 @@ class Model(nn.Module):
         super().to(*args, **kwargs)
         # We need to manually send some layers to the appropriate device
         self.conv1.to(*args, **kwargs)
+        self.activation1.to(*args, **kwargs)
         self.conv2.to(*args, **kwargs)
-        for conv in self.conv3:
+        self.activation2.to(*args, **kwargs)
+        for conv, prelu in zip(self.conv3, self.activation3):
             conv.to(*args, **kwargs)
+            prelu.to(*args, **kwargs)
         self.conv4.to(*args, **kwargs)
+        self.activation4.to(*args, **kwargs)
         self.deconv.to(*args, **kwargs)
         return self
 
