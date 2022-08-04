@@ -21,11 +21,16 @@ class Model(nn.Module):
         self.n = n
         # What is
         self.conv1 = Conv2d(3, kernel_size=5, out_channels=self.d, padding='same')
+        self.activation1 = nn.PReLU()
         self.conv2 = Conv2d(self.d, kernel_size=1, out_channels=self.s, padding='same')
+        self.activation2 = nn.PReLU()
         self.conv3 = []
+        self.activation3 = []
         for _ in range(self.m):
             self.conv3.append(Conv2d(self.s, kernel_size=3, out_channels=self.s, padding='same'))
+            self.activation3.append(nn.PReLU())
         self.conv4 = Conv2d(self.s, kernel_size=1, out_channels=self.d, padding='same')
+        self.activation4 = nn.PReLU()
         self.deconv = ConvTranspose2d(self.d, kernel_size=9, out_channels=3, stride=self.n)
 
     def float(self):
@@ -51,8 +56,12 @@ class Model(nn.Module):
 
     def forward(self, inp):
         x = self.conv1(inp)
+        x = self.activation1(x)
         x = self.conv2(x)
-        for conv in self.conv3:
+        x = self.activation2(x)
+        for conv, prelu in zip(self.conv3, self.activation3):
             x = conv(x)
+            x = prelu(x)
         x = self.conv4(x)
+        x = self.activation4(x)
         return self.deconv(x)
