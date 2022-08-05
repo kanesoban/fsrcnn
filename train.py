@@ -77,7 +77,7 @@ def evaluate(model, test_dataloader, dataset_name):
                                                        outputs.shape[-2:]).transpose((2, 0, 1)), axis=0)
                 high_res_image = torch.from_numpy(high_res_image).float().to(device)
 
-                peak_signal_noise_ratio(outputs, high_res_image)
+                test_psnr += peak_signal_noise_ratio(outputs, high_res_image)
 
         print('Average PSNR for test set {}: {}'.format(dataset_name, test_psnr / len(test_dataloader.dataset)))
 
@@ -142,4 +142,4 @@ if __name__ == '__main__':
     model.load_state_dict(torch.load('model.pt'))
     evaluate(model, bsd100_dataloader, 'BSD100')
     evaluate(model, set5_dataloader, 'Set5')
-    evaluate(model, set14_dataloader, 'Set14')
+    #evaluate(model, set14_dataloader, 'Set14')
