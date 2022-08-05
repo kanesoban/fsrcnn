@@ -8,6 +8,7 @@ from tqdm import tqdm
 import torch
 from torch.utils.data import DataLoader
 from torch.nn import MSELoss
+from torchmetrics.functional import peak_signal_noise_ratio
 
 from fsrcnn.dataset import Dataset
 from fsrcnn.model import Model
@@ -17,6 +18,7 @@ upscaling_factor = 2
 mixed_precision_enabled = False
 epochs = 10
 batch_size = 1
+learning_rate = 0.001
 
 
 def create_dataloaders():
@@ -49,7 +51,8 @@ def calculate_loss(batch, model, criterion):
         high_res_image = np.expand_dims(resize(np.squeeze(high_res_image.cpu().numpy().transpose((0, 2, 3, 1))),
                                                outputs.shape[-2:]).transpose((2, 0, 1)), axis=0)
         high_res_image = torch.from_numpy(high_res_image).float().to(device)
-        return criterion(outputs, high_res_image)
+
+        return criterion(outputs, high_res_image), peak_signal_noise_ratio(outputs, high_res_image)
 
 
 if __name__ == '__main__':
@@ -61,7 +64,7 @@ if __name__ == '__main__':
     # Detect if we have a GPU available
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     model = Model(d=32, s=5, n=upscaling_factor).float().to(device)
-    optimizer = torch.optim.RMSprop(model.parameters())
+    optimizer = torch.optim.RMSprop(model.parameters(), lr=learning_rate)
     criterion = MSELoss()
 
     best_val_loss = np.inf
@@ -69,12 +72,14 @@ if __name__ == '__main__':
     for _ in range(epochs):
         epoch_train_loss = 0.0
         epoch_val_loss = 0.0
+        epoch_train_psnr = 0.0
+        epoch_val_psnr = 0.0
 
         # Train for 1 epoch
         model.train()
         with torch.set_grad_enabled(True):
             for batch_idx, batch in tqdm(enumerate(train_dataloader)):
-                loss = calculate_loss(batch, model, criterion)
+                loss, psnr = calculate_loss(batch, model, criterion)
 
                 # Backpropagate losses
                 # TODO: handle scaler?
@@ -86,19 +91,24 @@ if __name__ == '__main__':
 
                 # statistics
                 epoch_train_loss += loss.item() * batch_size
+                epoch_train_psnr += float(psnr) * batch_size
 
         # Validate
         model.eval()
         with torch.set_grad_enabled(False):
             for batch_idx, batch in tqdm(enumerate(val_dataloader)):
-                loss = calculate_loss(batch, model, criterion)
+                loss, psnr = calculate_loss(batch, model, criterion)
 
                 # statistics
                 epoch_val_loss += loss.item() * batch_size
+                epoch_val_psnr += float(psnr) * batch_size
             if epoch_val_loss < best_val_loss:
                 best_val_loss = epoch_val_loss
+                best_val_psnr = epoch_val_psnr
                 torch.save(model.state_dict(), 'model.pt')
                 torch.save(optimizer, 'optimizer.pt')
 
             print('Average training loss for epoch: {}'.format(epoch_train_loss / len(train_dataloader.dataset)))
             print('Average validation loss for epoch: {}'.format(epoch_val_loss / len(val_dataloader.dataset)))
+            print('Average training PSNR for epoch: {}'.format(epoch_train_psnr / len(train_dataloader.dataset)))
+            print('Average validation PSNR for epoch: {}'.format(epoch_val_psnr / len(val_dataloader.dataset)))

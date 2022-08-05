@@ -9,6 +9,7 @@ dependencies:
   - numpy
   - torchvision
   - pytorch
+  - torchmetrics
   - jupyterlab
   - tqdm
   - scikit-image
