@@ -43,7 +43,7 @@ def create_dataloaders():
     set5_dataset = Dataset(set5_image_paths, upscaling_factor=upscaling_factor)
     set5_dataloader = DataLoader(set5_dataset, batch_size=1, shuffle=False, num_workers=1, pin_memory=True)
 
-    set14_image_paths = 'datasets/Set5/image_SRF4/*HR.png'
+    set14_image_paths = 'datasets/Set14/image_SRF4/*HR.png'
     set14_dataset = Dataset(set14_image_paths, upscaling_factor=upscaling_factor)
     set14_dataloader = DataLoader(set14_dataset, batch_size=1, shuffle=False, num_workers=1, pin_memory=True)
 
