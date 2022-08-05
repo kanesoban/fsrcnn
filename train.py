@@ -139,7 +139,7 @@ if __name__ == '__main__':
 
     # Test
     print('Evaluating on test sets...')
-    model.load_state_dict('model.pt')
+    model.load_state_dict(torch.load('model.pt'))
     evaluate(model, bsd100_dataloader, 'BSD100')
     evaluate(model, set5_dataloader, 'Set5')
     evaluate(model, set14_dataloader, 'Set14')
