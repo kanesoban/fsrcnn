@@ -35,15 +35,15 @@ def create_dataloaders():
     val_dataset = Dataset(val_paths, upscaling_factor=upscaling_factor)
     val_dataloader = DataLoader(val_dataset, batch_size=1, shuffle=False, num_workers=1, pin_memory=True)
 
-    bsd100_image_paths = 'datasets/BSD100_SR/image_SRF4/*HR.png'
+    bsd100_image_paths = glob('datasets/BSD100_SR/image_SRF4/*HR.png')
     bsd100_dataset = Dataset(bsd100_image_paths, upscaling_factor=upscaling_factor)
     bsd100_dataloader = DataLoader(bsd100_dataset, batch_size=1, shuffle=False, num_workers=1, pin_memory=True)
 
-    set5_image_paths = 'datasets/Set5/image_SRF4/*HR.png'
+    set5_image_paths = glob('datasets/Set5/image_SRF4/*HR.png')
     set5_dataset = Dataset(set5_image_paths, upscaling_factor=upscaling_factor)
     set5_dataloader = DataLoader(set5_dataset, batch_size=1, shuffle=False, num_workers=1, pin_memory=True)
 
-    set14_image_paths = 'datasets/Set14/image_SRF4/*HR.png'
+    set14_image_paths = glob('datasets/Set14/image_SRF4/*HR.png')
     set14_dataset = Dataset(set14_image_paths, upscaling_factor=upscaling_factor)
     set14_dataloader = DataLoader(set14_dataset, batch_size=1, shuffle=False, num_workers=1, pin_memory=True)
 
