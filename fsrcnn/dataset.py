@@ -6,6 +6,7 @@ from numpy import asarray
 from PIL import Image
 import torch
 from torch.utils.data import Dataset as TorchDataset
+import torchvision.transforms.functional as functional
 
 
 def to_ndarray(value):
@@ -20,6 +21,8 @@ class Dataset(TorchDataset):
         self.transform = transform
         self.downscale_factors = [1.0, 0.9, 0.8, 0.7, 0.6]
         self.rotations = [0, 90, 180, 270]
+        self.means = [0.485, 0.456, 0.406]
+        self.stds = [0.229, 0.224, 0.225]
 
     def __len__(self):
         return len(self.image_paths)
@@ -62,6 +65,9 @@ class Dataset(TorchDataset):
         # torch image: C X H X W
         cropped_image = cropped_image.transpose((2, 0, 1)).astype(float)
         low_res_image = low_res_image.transpose((2, 0, 1)).astype(float)
+
+        # Normalize input
+        low_res_image = functional.normalize(low_res_image, self.means, self.stds)
 
         sample = {'high_res_image': cropped_image, 'low_res_image': low_res_image}
 

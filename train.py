@@ -18,6 +18,7 @@ mixed_precision_enabled = False
 epochs = 10
 batch_size = 1
 
+
 def create_dataloaders():
     image_paths = glob('datasets/T91/*')
     random.shuffle(image_paths)
