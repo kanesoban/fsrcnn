@@ -9,6 +9,7 @@ import torch
 from torch.utils.data import DataLoader
 from torch.nn import MSELoss
 from torchmetrics.functional import peak_signal_noise_ratio
+from torch.utils.tensorboard import SummaryWriter
 
 from fsrcnn.dataset import Dataset
 from fsrcnn.model import Model
@@ -85,6 +86,8 @@ def evaluate(model, test_dataloader, dataset_name):
 if __name__ == '__main__':
     train_dataloader, val_dataloader, bsd100_dataloader, set5_dataloader, set14_dataloader = create_dataloaders()
 
+    tensorboard = SummaryWriter(log_dir='tensorboard')
+
     # Detect if we have a GPU available
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     model = Model(d=32, s=5, n=upscaling_factor).float().to(device)
@@ -93,7 +96,7 @@ if __name__ == '__main__':
 
     best_val_loss = np.inf
 
-    for _ in range(epochs):
+    for epoch in range(epochs):
         epoch_train_loss = 0.0
         epoch_val_loss = 0.0
         epoch_train_psnr = 0.0
@@ -132,10 +135,21 @@ if __name__ == '__main__':
                 torch.save(model.state_dict(), 'model.pt')
                 torch.save(optimizer, 'optimizer.pt')
 
-            print('Average training loss for epoch: {}'.format(epoch_train_loss / len(train_dataloader.dataset)))
-            print('Average validation loss for epoch: {}'.format(epoch_val_loss / len(val_dataloader.dataset)))
-            print('Average training PSNR for epoch: {}'.format(epoch_train_psnr / len(train_dataloader.dataset)))
-            print('Average validation PSNR for epoch: {}'.format(epoch_val_psnr / len(val_dataloader.dataset)))
+            train_loss = epoch_train_loss / len(train_dataloader.dataset)
+            val_loss = epoch_val_loss / len(val_dataloader.dataset)
+            train_psnr = epoch_train_psnr / len(train_dataloader.dataset)
+            val_psnr = epoch_val_psnr / len(val_dataloader.dataset)
+
+            # Log train metrics
+            tensorboard.add_scalar('train loss', train_loss, epoch+1)
+            tensorboard.add_scalar('val loss', val_loss, epoch + 1)
+            tensorboard.add_scalar('train psnr', train_psnr, epoch + 1)
+            tensorboard.add_scalar('val psnr', val_psnr, epoch + 1)
+
+            print('Average training loss for epoch: {}'.format(train_loss))
+            print('Average validation loss for epoch: {}'.format(val_loss))
+            print('Average training PSNR for epoch: {}'.format(train_psnr))
+            print('Average validation PSNR for epoch: {}'.format(val_psnr))
 
     # Test
     print('Evaluating on test sets...')
