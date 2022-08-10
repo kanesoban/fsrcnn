@@ -20,6 +20,8 @@ mixed_precision_enabled = False
 epochs = 10
 batch_size = 1
 learning_rate = 0.001
+d = 48
+s = 12
 
 
 def create_dataloaders():
@@ -90,7 +92,7 @@ if __name__ == '__main__':
 
     # Detect if we have a GPU available
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    model = Model(d=32, s=5, n=upscaling_factor).float().to(device)
+    model = Model(d=d, s=s, n=upscaling_factor).float().to(device)
     optimizer = torch.optim.RMSprop(model.parameters(), lr=learning_rate)
     criterion = MSELoss()
 
