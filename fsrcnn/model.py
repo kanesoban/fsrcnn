@@ -19,17 +19,21 @@ class Model(nn.Module):
         self.s = s
         self.m = m
         self.n = n
-        # What is
+        self.conv_layers = []
         self.conv1 = Conv2d(3, kernel_size=5, out_channels=self.d, padding='same')
+        self.conv_layers.append(self.conv1)
         self.activation1 = nn.PReLU()
         self.conv2 = Conv2d(self.d, kernel_size=1, out_channels=self.s, padding='same')
+        self.conv_layers.append(self.conv2)
         self.activation2 = nn.PReLU()
         self.conv3 = []
         self.activation3 = []
         for _ in range(self.m):
             self.conv3.append(Conv2d(self.s, kernel_size=3, out_channels=self.s, padding='same'))
+            self.conv_layers.append(self.conv3[-1])
             self.activation3.append(nn.PReLU())
         self.conv4 = Conv2d(self.s, kernel_size=1, out_channels=self.d, padding='same')
+        self.conv_layers.append(self.conv4)
         self.activation4 = nn.PReLU()
         self.deconv = ConvTranspose2d(self.d, kernel_size=9, out_channels=3, stride=self.n)
 

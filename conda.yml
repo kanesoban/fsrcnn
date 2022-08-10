@@ -8,8 +8,9 @@ dependencies:
   - pip
   - numpy
   - torchvision
-  - pytorch
+  - pytorch==1.10.2
   - torchmetrics
+  - setuptools==59.5.0
   - jupyterlab
   - tqdm
   - scikit-image

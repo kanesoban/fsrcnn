@@ -17,7 +17,7 @@ from fsrcnn.model import Model
 
 upscaling_factor = 2
 mixed_precision_enabled = False
-epochs = 10
+epochs = 100
 batch_size = 1
 learning_rate = 0.001
 d = 48
@@ -93,7 +93,20 @@ if __name__ == '__main__':
     # Detect if we have a GPU available
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     model = Model(d=d, s=s, n=upscaling_factor).float().to(device)
-    optimizer = torch.optim.RMSprop(model.parameters(), lr=learning_rate)
+
+    params = []
+    for conv_layer in model.conv_layers:
+        params.append({
+            'params': conv_layer.parameters(),
+            'lr': 1e-3
+        })
+    params.append({
+        'params': model.deconv.parameters(),
+        'lr': 1e-4
+    })
+
+    optimizer = torch.optim.RMSprop(params, lr=1e-4)
+
     criterion = MSELoss()
 
     best_val_loss = np.inf
