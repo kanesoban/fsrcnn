@@ -13,29 +13,30 @@ d = 56, s = 16 | 33.01 (12336)| 33.12 (14640) | 33.17 (16944)
 
 
 class Model(nn.Module):
-    def __init__(self, d, s, m=2, n=2):
+    def __init__(self, d, s, m=2, n=2, color_channels=1):
         super().__init__()
+        self.color_channels = color_channels
         self.d = d
         self.s = s
         self.m = m
         self.n = n
         self.conv_layers = []
-        self.conv1 = Conv2d(3, kernel_size=5, out_channels=self.d, padding='same')
+        self.conv1 = Conv2d(in_channels=self.color_channels, kernel_size=5, out_channels=self.d, padding='same')
         self.conv_layers.append(self.conv1)
         self.activation1 = nn.PReLU()
-        self.conv2 = Conv2d(self.d, kernel_size=1, out_channels=self.s, padding='same')
+        self.conv2 = Conv2d(in_channels=self.d, kernel_size=1, out_channels=self.s, padding='same')
         self.conv_layers.append(self.conv2)
         self.activation2 = nn.PReLU()
         self.conv3 = []
         self.activation3 = []
         for _ in range(self.m):
-            self.conv3.append(Conv2d(self.s, kernel_size=3, out_channels=self.s, padding='same'))
+            self.conv3.append(Conv2d(in_channels=self.s, kernel_size=3, out_channels=self.s, padding='same'))
             self.conv_layers.append(self.conv3[-1])
             self.activation3.append(nn.PReLU())
-        self.conv4 = Conv2d(self.s, kernel_size=1, out_channels=self.d, padding='same')
+        self.conv4 = Conv2d(in_channels=self.s, kernel_size=1, out_channels=self.d, padding='same')
         self.conv_layers.append(self.conv4)
         self.activation4 = nn.PReLU()
-        self.deconv = ConvTranspose2d(self.d, kernel_size=9, out_channels=3, stride=self.n)
+        self.deconv = ConvTranspose2d(in_channels=self.d, kernel_size=9, out_channels=self.color_channels, stride=self.n)
 
     def float(self):
         super().float()

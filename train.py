@@ -28,6 +28,7 @@ means = [0.485, 0.456, 0.406]
 stds = [0.229, 0.224, 0.225]
 user_lr_scheduler = True
 use_target_normalization = False
+color_channels = 1
 
 
 def create_dataloaders():
@@ -38,22 +39,22 @@ def create_dataloaders():
     train_paths = t91_image_paths[:train_set]
     val_paths = t91_image_paths[train_set:]
 
-    train_dataset = Dataset(train_paths, upscaling_factor=upscaling_factor)
+    train_dataset = Dataset(train_paths, upscaling_factor=upscaling_factor, only_luminosity=(color_channels == 1))
     train_dataloader = DataLoader(train_dataset, batch_size=1, shuffle=False, num_workers=1, pin_memory=True)
 
-    val_dataset = Dataset(val_paths, upscaling_factor=upscaling_factor)
+    val_dataset = Dataset(val_paths, upscaling_factor=upscaling_factor, only_luminosity=(color_channels == 1))
     val_dataloader = DataLoader(val_dataset, batch_size=1, shuffle=False, num_workers=1, pin_memory=True)
 
     bsd100_image_paths = glob('datasets/BSD100_SR/image_SRF_4/*HR.png')
-    bsd100_dataset = Dataset(bsd100_image_paths, upscaling_factor=upscaling_factor)
+    bsd100_dataset = Dataset(bsd100_image_paths, upscaling_factor=upscaling_factor, only_luminosity=(color_channels == 1))
     bsd100_dataloader = DataLoader(bsd100_dataset, batch_size=1, shuffle=False, num_workers=1, pin_memory=True)
 
     set5_image_paths = glob('datasets/Set5/image_SRF_4/*HR.png')
-    set5_dataset = Dataset(set5_image_paths, upscaling_factor=upscaling_factor)
+    set5_dataset = Dataset(set5_image_paths, upscaling_factor=upscaling_factor, only_luminosity=(color_channels == 1))
     set5_dataloader = DataLoader(set5_dataset, batch_size=1, shuffle=False, num_workers=1, pin_memory=True)
 
     set14_image_paths = glob('datasets/Set14/image_SRF_4/*HR.png')
-    set14_dataset = Dataset(set14_image_paths, upscaling_factor=upscaling_factor)
+    set14_dataset = Dataset(set14_image_paths, upscaling_factor=upscaling_factor, only_luminosity=(color_channels == 1))
     set14_dataloader = DataLoader(set14_dataset, batch_size=1, shuffle=False, num_workers=1, pin_memory=True)
 
     return train_dataloader, val_dataloader, bsd100_dataloader, set5_dataloader, set14_dataloader
@@ -65,7 +66,8 @@ def calculate_validation_metrics(batch, model, criterion):
     with torch.cuda.amp.autocast(enabled=False):
         outputs = model(low_res_image.float())
         # This resizing 'hack' is needed because the deconvolved output and the high resolution image are not exactly the same shape
-        high_res_image = np.expand_dims(resize(np.squeeze(high_res_image.cpu().numpy().transpose((0, 2, 3, 1))),
+
+        high_res_image = np.expand_dims(resize((high_res_image.cpu().numpy().transpose((0, 2, 3, 1)))[0],
                                                outputs.shape[-2:]).transpose((2, 0, 1)), axis=0)
         high_res_image = torch.from_numpy(high_res_image).float().to(device)
 
@@ -94,7 +96,7 @@ def evaluate(model, test_dataloader, dataset_name):
             with torch.cuda.amp.autocast(enabled=False):
                 outputs = model(low_res_image.float())
                 # This resizing 'hack' is needed because the deconvolved output and the high resolution image are not exactly the same shape
-                high_res_image = np.expand_dims(resize(np.squeeze(high_res_image.cpu().numpy().transpose((0, 2, 3, 1))),
+                high_res_image = np.expand_dims(resize((high_res_image.cpu().numpy().transpose((0, 2, 3, 1)))[0],
                                                        outputs.shape[-2:]).transpose((2, 0, 1)), axis=0)
                 high_res_image = torch.from_numpy(high_res_image).float().to(device)
 
@@ -117,7 +119,7 @@ if __name__ == '__main__':
 
     # Detect if we have a GPU available
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    model = Model(d=d, s=s, n=upscaling_factor).float().to(device)
+    model = Model(d=d, s=s, n=upscaling_factor, color_channels=color_channels).float().to(device)
 
     params = []
     for conv_layer in model.conv_layers:
