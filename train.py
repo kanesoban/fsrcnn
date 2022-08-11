@@ -130,7 +130,7 @@ if __name__ == '__main__':
         'lr': 1e-4
     })
 
-    optimizer = torch.optim.RMSprop(params)
+    optimizer = torch.optim.Adam(params, lr=learning_rate)
     lr_scheduler = ReduceLROnPlateau(optimizer, factor=0.5, patience=5)
 
     criterion = MSELoss()
