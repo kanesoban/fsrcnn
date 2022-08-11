@@ -10,6 +10,8 @@ from torch.utils.data import DataLoader
 from torch.nn import MSELoss
 from torchmetrics.functional import peak_signal_noise_ratio
 from torch.utils.tensorboard import SummaryWriter
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+import torchvision.transforms.functional as functional
 
 from fsrcnn.dataset import Dataset
 from fsrcnn.model import Model
@@ -22,6 +24,12 @@ batch_size = 1
 learning_rate = 0.001
 d = 48
 s = 12
+means = [0.485, 0.456, 0.406]
+stds = [0.229, 0.224, 0.225]
+means = torch.as_tensor(means, device=torch.device('cuda:0'))
+stds = torch.as_tensor(stds, device=torch.device('cuda:0'))
+user_lr_scheduler = False
+use_target_normalization = True
 
 
 def create_dataloaders():
@@ -63,7 +71,17 @@ def calculate_validation_metrics(batch, model, criterion):
                                                outputs.shape[-2:]).transpose((2, 0, 1)), axis=0)
         high_res_image = torch.from_numpy(high_res_image).float().to(device)
 
-        return criterion(outputs, high_res_image), peak_signal_noise_ratio(outputs, high_res_image)
+        if use_target_normalization:
+            # Normalize high res image for the loss
+            high_res_image_normalized = functional.normalize(high_res_image, means, stds)
+
+            # Denormalize outputs for PSNR
+            # Normalization: output[channel] = (input[channel] - mean[channel]) / std[channel]
+            outputs_denormalized = (outputs[:, None, None] * stds[:, None, None]) + means[:, None, None]
+
+            return criterion(outputs, high_res_image_normalized), peak_signal_noise_ratio(outputs_denormalized, high_res_image)
+        else:
+            return criterion(outputs, high_res_image), peak_signal_noise_ratio(outputs, high_res_image)
 
 
 def evaluate(model, test_dataloader, dataset_name):
@@ -79,6 +97,11 @@ def evaluate(model, test_dataloader, dataset_name):
                 high_res_image = np.expand_dims(resize(np.squeeze(high_res_image.cpu().numpy().transpose((0, 2, 3, 1))),
                                                        outputs.shape[-2:]).transpose((2, 0, 1)), axis=0)
                 high_res_image = torch.from_numpy(high_res_image).float().to(device)
+
+                if use_target_normalization:
+                    # Denormalize outputs for PSNR
+                    # Normalization: output[channel] = (input[channel] - mean[channel]) / std[channel]
+                    outputs = (outputs[:, None, None] * stds[:, None, None]) + means[:, None, None]
 
                 test_psnr += peak_signal_noise_ratio(outputs, high_res_image)
 
@@ -105,7 +128,8 @@ if __name__ == '__main__':
         'lr': 1e-4
     })
 
-    optimizer = torch.optim.RMSprop(params, lr=1e-4)
+    optimizer = torch.optim.RMSprop(params)
+    scheduler = ReduceLROnPlateau(optimizer, factor=0.5, patience=5)
 
     criterion = MSELoss()
 
@@ -121,6 +145,7 @@ if __name__ == '__main__':
         model.train()
         with torch.set_grad_enabled(True):
             for batch_idx, batch in tqdm(enumerate(train_dataloader)):
+                optimizer.zero_grad()
                 loss, psnr = calculate_validation_metrics(batch, model, criterion)
 
                 # Backpropagate losses
@@ -129,7 +154,6 @@ if __name__ == '__main__':
 
                 # Apply updates
                 optimizer.step()
-                optimizer.zero_grad()
 
                 # statistics
                 epoch_train_loss += loss.item() * batch_size
@@ -152,6 +176,9 @@ if __name__ == '__main__':
 
             train_loss = epoch_train_loss / len(train_dataloader.dataset)
             val_loss = epoch_val_loss / len(val_dataloader.dataset)
+            # Reduce learning rate of necessary
+            if user_lr_scheduler:
+                scheduler.step(val_loss)
             train_psnr = epoch_train_psnr / len(train_dataloader.dataset)
             val_psnr = epoch_val_psnr / len(val_dataloader.dataset)
 
