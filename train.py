@@ -26,8 +26,6 @@ d = 48
 s = 12
 means = [0.485, 0.456, 0.406]
 stds = [0.229, 0.224, 0.225]
-means = torch.as_tensor(means, device=torch.device('cuda:0'))
-stds = torch.as_tensor(stds, device=torch.device('cuda:0'))
 user_lr_scheduler = False
 use_target_normalization = True
 
@@ -77,7 +75,9 @@ def calculate_validation_metrics(batch, model, criterion):
 
             # Denormalize outputs for PSNR
             # Normalization: output[channel] = (input[channel] - mean[channel]) / std[channel]
-            outputs_denormalized = (outputs[:, None, None] * stds[:, None, None]) + means[:, None, None]
+            outputs_denormalized = torch.empty_like(outputs)
+            for i in range(3):
+                outputs_denormalized[0, i, :, :] = (outputs[0, i, :, :] * stds[i]) + means[i]
 
             return criterion(outputs, high_res_image_normalized), peak_signal_noise_ratio(outputs_denormalized, high_res_image)
         else:
