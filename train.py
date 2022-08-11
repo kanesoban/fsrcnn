@@ -26,8 +26,8 @@ d = 48
 s = 12
 means = [0.485, 0.456, 0.406]
 stds = [0.229, 0.224, 0.225]
-user_lr_scheduler = False
-use_target_normalization = True
+user_lr_scheduler = True
+use_target_normalization = False
 
 
 def create_dataloaders():
@@ -101,7 +101,9 @@ def evaluate(model, test_dataloader, dataset_name):
                 if use_target_normalization:
                     # Denormalize outputs for PSNR
                     # Normalization: output[channel] = (input[channel] - mean[channel]) / std[channel]
-                    outputs = (outputs[:, None, None] * stds[:, None, None]) + means[:, None, None]
+                    outputs = torch.empty_like(outputs)
+                    for i in range(3):
+                        outputs[0, i, :, :] = (outputs[0, i, :, :] * stds[i]) + means[i]
 
                 test_psnr += peak_signal_noise_ratio(outputs, high_res_image)
 
@@ -129,7 +131,7 @@ if __name__ == '__main__':
     })
 
     optimizer = torch.optim.RMSprop(params)
-    scheduler = ReduceLROnPlateau(optimizer, factor=0.5, patience=5)
+    lr_scheduler = ReduceLROnPlateau(optimizer, factor=0.5, patience=5)
 
     criterion = MSELoss()
 
@@ -178,7 +180,7 @@ if __name__ == '__main__':
             val_loss = epoch_val_loss / len(val_dataloader.dataset)
             # Reduce learning rate of necessary
             if user_lr_scheduler:
-                scheduler.step(val_loss)
+                lr_scheduler.step(val_loss)
             train_psnr = epoch_train_psnr / len(train_dataloader.dataset)
             val_psnr = epoch_val_psnr / len(val_dataloader.dataset)
 
@@ -187,6 +189,9 @@ if __name__ == '__main__':
             tensorboard.add_scalar('val loss', val_loss, epoch + 1)
             tensorboard.add_scalar('train psnr', train_psnr, epoch + 1)
             tensorboard.add_scalar('val psnr', val_psnr, epoch + 1)
+
+            for i, param_group in enumerate(optimizer.param_groups):
+                tensorboard.add_scalar('Group {} learning rate'.format(i+1), param_group['lr'], epoch+1)
 
             print('Average training loss for epoch: {}'.format(train_loss))
             print('Average validation loss for epoch: {}'.format(val_loss))

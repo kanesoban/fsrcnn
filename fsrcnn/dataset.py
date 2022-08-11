@@ -15,10 +15,9 @@ def to_ndarray(value):
 
 
 class Dataset(TorchDataset):
-    def __init__(self, image_paths, upscaling_factor=2, transform=None):
+    def __init__(self, image_paths, upscaling_factor=2):
         self.image_paths = image_paths
         self.upscaling_factor = upscaling_factor
-        self.transform = transform
         self.downscale_factors = [1.0, 0.9, 0.8, 0.7, 0.6]
         self.rotations = [0, 90, 180, 270]
         self.means = [0.485, 0.456, 0.406]
@@ -69,9 +68,4 @@ class Dataset(TorchDataset):
         # Normalize input
         low_res_image = functional.normalize(low_res_image, self.means, self.stds)
 
-        sample = {'high_res_image': cropped_image, 'low_res_image': low_res_image}
-
-        if self.transform:
-            sample = self.transform(sample)
-
-        return sample
+        return {'high_res_image': cropped_image, 'low_res_image': low_res_image}
