@@ -29,6 +29,7 @@ stds = [0.229, 0.224, 0.225]
 user_lr_scheduler = True
 use_target_normalization = False
 color_channels = 1
+experiment_name = 'test'
 
 
 def create_dataloaders():
@@ -121,6 +122,8 @@ def calculate_psnr(mse):
 if __name__ == '__main__':
     train_dataloader, val_dataloader, bsd100_dataloader, set5_dataloader, set14_dataloader = create_dataloaders()
 
+    experiment_path = os.path.join('tensorboard', experiment_name)
+    os.makedirs(experiment_path, exist_ok=True)
     tensorboard = SummaryWriter(log_dir='tensorboard')
 
     # Detect if we have a GPU available
