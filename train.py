@@ -8,7 +8,7 @@ from tqdm import tqdm
 import torch
 from torch.utils.data import DataLoader
 from torch.nn import MSELoss
-from torchmetrics.functional import peak_signal_noise_ratio
+from torchmetrics.functional import peak_signal_noise_ratio, mean_squared_error
 from torch.utils.tensorboard import SummaryWriter
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import torchvision.transforms.functional as functional
@@ -81,9 +81,11 @@ def calculate_validation_metrics(batch, model, criterion):
             for i in range(3):
                 outputs_denormalized[0, i, :, :] = (outputs[0, i, :, :] * stds[i]) + means[i]
 
-            return criterion(outputs, high_res_image_normalized), peak_signal_noise_ratio(outputs_denormalized, high_res_image)
+            return criterion(outputs, high_res_image_normalized), peak_signal_noise_ratio(outputs_denormalized, high_res_image), \
+                   mean_squared_error(outputs_denormalized, high_res_image)
         else:
-            return criterion(outputs, high_res_image), peak_signal_noise_ratio(outputs, high_res_image)
+            return criterion(outputs, high_res_image), peak_signal_noise_ratio(outputs, high_res_image), \
+                   mean_squared_error(outputs, high_res_image)
 
 
 def evaluate(model, test_dataloader, dataset_name):
@@ -112,6 +114,10 @@ def evaluate(model, test_dataloader, dataset_name):
         print('Average PSNR for test set {}: {}'.format(dataset_name, test_psnr / len(test_dataloader.dataset)))
 
 
+def calculate_psnr(mse):
+    return 20 * np.log10(255) - 10 * np.log10((float(mse)))
+
+
 if __name__ == '__main__':
     train_dataloader, val_dataloader, bsd100_dataloader, set5_dataloader, set14_dataloader = create_dataloaders()
 
@@ -119,7 +125,7 @@ if __name__ == '__main__':
 
     # Detect if we have a GPU available
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    model = Model(d=d, s=s, n=upscaling_factor, color_channels=color_channels).float().to(device)
+    model = Model(d=d, s=s, upscaling_factor=upscaling_factor, color_channels=color_channels).float().to(device)
 
     params = []
     for conv_layer in model.conv_layers:
@@ -150,7 +156,8 @@ if __name__ == '__main__':
         with torch.set_grad_enabled(True):
             for batch_idx, batch in tqdm(enumerate(train_dataloader)):
                 optimizer.zero_grad()
-                loss, psnr = calculate_validation_metrics(batch, model, criterion)
+                loss, _, mse = calculate_validation_metrics(batch, model, criterion)
+                psnr = calculate_psnr(mse)
 
                 # Backpropagate losses
                 # TODO: handle scaler?
@@ -160,18 +167,19 @@ if __name__ == '__main__':
                 optimizer.step()
 
                 # statistics
-                epoch_train_loss += loss.item() * batch_size
-                epoch_train_psnr += float(psnr) * batch_size
+                epoch_train_loss += loss.item()
+                epoch_train_psnr += float(psnr)
 
         # Validate
         model.eval()
         with torch.set_grad_enabled(False):
             for batch_idx, batch in tqdm(enumerate(val_dataloader)):
-                loss, psnr = calculate_validation_metrics(batch, model, criterion)
+                loss, _, mse = calculate_validation_metrics(batch, model, criterion)
+                psnr = calculate_psnr(mse)
 
                 # statistics
-                epoch_val_loss += loss.item() * batch_size
-                epoch_val_psnr += float(psnr) * batch_size
+                epoch_val_loss += loss.item()
+                epoch_val_psnr += float(psnr)
             if epoch_val_loss < best_val_loss:
                 best_val_loss = epoch_val_loss
                 best_val_psnr = epoch_val_psnr
