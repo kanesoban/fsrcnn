@@ -15,10 +15,12 @@ def to_ndarray(value):
 
 
 class Dataset(TorchDataset):
-    def __init__(self, image_paths, upscaling_factor=2, only_luminosity=True):
+    def __init__(self, image_paths, upscaling_factor=2, only_luminosity=True, downscaling_aug=False, rotation_aug=False):
         self.image_paths = image_paths
         self.upscaling_factor = upscaling_factor
         self.only_luminosity = only_luminosity
+        self.downscaling_aug = downscaling_aug
+        self.rotation_aug = rotation_aug
         self.downscale_factors = [1.0, 0.9, 0.8, 0.7, 0.6]
         self.rotations = [0, 90, 180, 270]
         self.means = [0.485, 0.456, 0.406]
@@ -50,16 +52,18 @@ class Dataset(TorchDataset):
             cropped_image = image
 
         # Downscaling augmentation
-        random_downscaling_factor = random.choice(self.downscale_factors)
-        new_size = int(cropped_image.shape[0] * random_downscaling_factor)
-        cropped_image = cv2.resize(cropped_image, dsize=(new_size, new_size), interpolation=cv2.INTER_CUBIC)
+        if self.downscaling_aug:
+            random_downscaling_factor = random.choice(self.downscale_factors)
+            new_size = int(cropped_image.shape[0] * random_downscaling_factor)
+            cropped_image = cv2.resize(cropped_image, dsize=(new_size, new_size), interpolation=cv2.INTER_CUBIC)
 
         # Rotation augmentation
-        random_rotation_factor = random.choice(self.rotations)
-        (height, width) = cropped_image.shape[:2]
-        center = (width / 2, height / 2)
-        transform_matrix = cv2.getRotationMatrix2D(center, random_rotation_factor, 1.0)
-        cropped_image = cv2.warpAffine(cropped_image, transform_matrix, (width, height))
+        if self.rotation_aug:
+            random_rotation_factor = random.choice(self.rotations)
+            (height, width) = cropped_image.shape[:2]
+            center = (width / 2, height / 2)
+            transform_matrix = cv2.getRotationMatrix2D(center, random_rotation_factor, 1.0)
+            cropped_image = cv2.warpAffine(cropped_image, transform_matrix, (width, height))
 
         if len(cropped_image.shape) == 2:
             cropped_image = np.expand_dims(cropped_image, axis=-1)

@@ -13,13 +13,13 @@ d = 56, s = 16 | 33.01 (12336)| 33.12 (14640) | 33.17 (16944)
 
 
 class Model(nn.Module):
-    def __init__(self, d, s, m=2, n=2, color_channels=1):
+    def __init__(self, d, s, m=2, upscaling_factor=2, color_channels=1):
         super().__init__()
         self.color_channels = color_channels
         self.d = d
         self.s = s
         self.m = m
-        self.n = n
+        self.upscaling_factor = upscaling_factor
         self.conv_layers = []
         self.conv1 = Conv2d(in_channels=self.color_channels, kernel_size=5, out_channels=self.d, padding='same')
         self.conv_layers.append(self.conv1)
@@ -36,7 +36,7 @@ class Model(nn.Module):
         self.conv4 = Conv2d(in_channels=self.s, kernel_size=1, out_channels=self.d, padding='same')
         self.conv_layers.append(self.conv4)
         self.activation4 = nn.PReLU()
-        self.deconv = ConvTranspose2d(in_channels=self.d, kernel_size=9, out_channels=self.color_channels, stride=self.n)
+        self.deconv = ConvTranspose2d(in_channels=self.d, kernel_size=9, out_channels=self.color_channels, stride=self.upscaling_factor)
 
     def float(self):
         super().float()
