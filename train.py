@@ -124,7 +124,7 @@ if __name__ == '__main__':
 
     experiment_path = os.path.join('tensorboard', experiment_name)
     os.makedirs(experiment_path, exist_ok=True)
-    tensorboard = SummaryWriter(log_dir='tensorboard')
+    tensorboard = SummaryWriter(log_dir=experiment_path)
 
     # Detect if we have a GPU available
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
