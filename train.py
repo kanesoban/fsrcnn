@@ -144,6 +144,7 @@ if __name__ == '__main__':
     criterion = MSELoss()
 
     best_val_loss = np.inf
+    best_epoch = -1
 
     for epoch in range(epochs):
         epoch_train_loss = 0.0
@@ -180,19 +181,22 @@ if __name__ == '__main__':
                 # statistics
                 epoch_val_loss += loss.item()
                 epoch_val_psnr += float(psnr)
-            if epoch_val_loss < best_val_loss:
-                best_val_loss = epoch_val_loss
-                best_val_psnr = epoch_val_psnr
-                torch.save(model.state_dict(), 'model.pt')
-                torch.save(optimizer, 'optimizer.pt')
 
             train_loss = epoch_train_loss / len(train_dataloader.dataset)
             val_loss = epoch_val_loss / len(val_dataloader.dataset)
+            train_psnr = epoch_train_psnr / len(train_dataloader.dataset)
+            val_psnr = epoch_val_psnr / len(val_dataloader.dataset)
+
+            if val_loss < best_val_loss:
+                best_epoch = epoch
+                best_val_loss = val_loss
+                best_val_psnr = val_psnr
+                torch.save(model.state_dict(), 'model.pt')
+                torch.save(optimizer, 'optimizer.pt')
+
             # Reduce learning rate of necessary
             if user_lr_scheduler:
                 lr_scheduler.step(val_loss)
-            train_psnr = epoch_train_psnr / len(train_dataloader.dataset)
-            val_psnr = epoch_val_psnr / len(val_dataloader.dataset)
 
             # Log train metrics
             tensorboard.add_scalar('train loss', train_loss, epoch+1)
@@ -207,6 +211,10 @@ if __name__ == '__main__':
             print('Average validation loss for epoch: {}'.format(val_loss))
             print('Average training PSNR for epoch: {}'.format(train_psnr))
             print('Average validation PSNR for epoch: {}'.format(val_psnr))
+
+    print('Best epoch: {}.:'.format(best_epoch+1))
+    print('Average validation loss for epoch {}: {}'.format(best_epoch + 1, best_val_loss))
+    print('Average validation PSNR for epoch {}: {}'.format(best_epoch + 1, best_val_psnr))
 
     # Test
     print('Evaluating on test sets...')
